@@ -2,10 +2,13 @@ com.vpolosov.trainee.mergexml
 com.vpolosov.trainee.mergexml.aspect
 com.vpolosov.trainee.mergexml.config
 com.vpolosov.trainee.mergexml.controller
+com.vpolosov.trainee.mergexml.dtos
+com.vpolosov.trainee.mergexml.dtos.views
 com.vpolosov.trainee.mergexml.handler
 com.vpolosov.trainee.mergexml.handler.dto
 com.vpolosov.trainee.mergexml.handler.exception
 com.vpolosov.trainee.mergexml.handler.filter
+com.vpolosov.trainee.mergexml.mappers
 com.vpolosov.trainee.mergexml.model
 com.vpolosov.trainee.mergexml.repository
 com.vpolosov.trainee.mergexml.service
