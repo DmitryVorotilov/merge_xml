@@ -47,7 +47,7 @@ public class ValidationProcess {
     /**
      * Путь к итоговому документу.
      */
-    @Column(name="total_doc_ref", nullable = false)
+    @Column(name="total_doc_ref")
     private String totalDocRef;
 
     /**

@@ -59,7 +59,7 @@ public class DocumentUtil {
         var document = parse(xmlFile);
         var nodeList = document.getElementsByTagName(tagName);
         if (nodeList.getLength() == EMPTY_SIZE) {
-            throw new XmlTagNotFoundException("Xml tag was not found in document");
+            throw new XmlTagNotFoundException("Xml tag " + tagName + " was not found in document");
         }
         return nodeList.item(FIRST_ELEMENT).getTextContent();
     }
@@ -76,7 +76,7 @@ public class DocumentUtil {
     public String getValueByTagName(Document document, String tagName) {
         var nodeList = document.getElementsByTagName(tagName);
         if (nodeList.getLength() == EMPTY_SIZE) {
-            throw new XmlTagNotFoundException("Xml tag was not found in document");
+            throw new XmlTagNotFoundException("Xml tag " + tagName + " was not found in document");
         }
         return nodeList.item(FIRST_ELEMENT).getTextContent();
     }

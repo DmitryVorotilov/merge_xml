@@ -62,8 +62,8 @@ public class ValidationFileHistory {
     /**
      * Поля, непрошедшие проверку.
      */
-    @Column(name = "fail_fields", columnDefinition = "TEXT")
-    private String failFields;
+    @Column(name = "failure_reason", columnDefinition = "TEXT")
+    private String failureReason;
 
     /**
      * Дата валидации.
@@ -138,8 +138,8 @@ public class ValidationFileHistory {
                 + "isSuccess = "
                 + isSuccess
                 + ", "
-                + "failFields = "
-                + failFields
+                + "failureReason = "
+                + failureReason
                 + ", "
                 + "validationDate = "
                 + validationDate

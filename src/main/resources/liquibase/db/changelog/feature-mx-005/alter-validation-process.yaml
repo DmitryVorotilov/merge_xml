@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2
+      author: Artyom Bogaichuk
+      changes:
+        - dropNotNullConstraint:
+            tableName: validation_process
+            columnName: total_doc_ref

@@ -1,4 +1,8 @@
 databaseChangeLog:
   - includeAll:
       path: liquibase/scripts/
+  - include:
+      file: liquibase/db/changelog/feature-mx-005/alter-validation-file-history.yaml
+  - include:
+      file: liquibase/db/changelog/feature-mx-005/alter-validation-process.yaml
 encoding: "UTF-8"
