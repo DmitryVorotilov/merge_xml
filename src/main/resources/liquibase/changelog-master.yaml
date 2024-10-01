@@ -1,4 +1,8 @@
 databaseChangeLog:
-  - includeAll:
-      path: liquibase/scripts/
+  - include:
+      file: liquibase/scripts/2024.06.18_migrations_V1_create_database.sql
+  - include:
+      file: liquibase/scripts/21-01-2024-changelog.sql
+  - include:
+      file: liquibase/scripts/01-10-2024-changelog.sql
 encoding: "UTF-8"
