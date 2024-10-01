@@ -1,9 +1,0 @@
-databaseChangeLog:
-  - changeSet:
-      id: 3
-      author: Artyom Bogaichuk
-      changes:
-        - renameColumn:
-            tableName: validation_file_history
-            oldColumnName: fail_fields
-            newColumnName: failure_reason

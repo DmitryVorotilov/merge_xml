@@ -1,4 +1,4 @@
-package com.vpolosov.trainee.mergexml.service;
+package com.vpolosov.trainee.mergexml.dtos;
 
 import java.io.File;
 import java.util.List;

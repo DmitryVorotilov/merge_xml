@@ -154,7 +154,7 @@ class MergeControllerIntegrationTests {
         ValidationProcess validationProcess = processes.get(0);
         assertThat(validationProcess.getDirRef()).isEqualTo(absolutePath);
         assertThat(validationProcess.getIsSuccess()).isFalse();
-        assertThat(validationProcess.getTotalDocRef()).isEmpty();
+        assertThat(validationProcess.getTotalDocRef()).isNull();
         assertThat(validationProcess.getValidationProcessDate()).isNotNull();
 
         List<ValidationFileHistory> histories = validationFileHistoryRepository.findAll();
