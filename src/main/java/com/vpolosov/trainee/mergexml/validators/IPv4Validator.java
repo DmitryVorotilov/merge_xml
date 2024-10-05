@@ -1,7 +1,9 @@
 package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
+import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
 import com.vpolosov.trainee.mergexml.handler.exception.InvalidIPv4Exception;
+import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,7 +21,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.IP;
  */
 @Component
 @RequiredArgsConstructor
-public class IPv4Validator implements Predicate<Document> {
+public class IPv4Validator implements Predicate<ValidateDocumentDto> {
 
     /**
      * Regexp паттерн для проверки IPv4.
@@ -34,17 +36,24 @@ public class IPv4Validator implements Predicate<Document> {
     private final DocumentUtil documentUtil;
 
     /**
+     * Публикация события ошибки валидации.
+     */
+    private final PublishValidationFileEvent publishValidationFileEvent;
+
+    /**
      * {@inheritDoc}
      *
      * @throws InvalidIPv4Exception когда IP адрес не соответствует формату IPv4.
      */
     @Override
     @Loggable
-    public boolean test(Document document) {
-        var ipv4 = documentUtil.getValueByTagName(document, IP);
+    public boolean test(ValidateDocumentDto validateDocumentDto) {
+        var ipv4 = documentUtil.getValueByTagName(validateDocumentDto.document(), IP);
         if (IPV4_REGEXP.matcher(ipv4).matches()) {
+            publishValidationFileEvent.publishSuccess(validateDocumentDto);
             return true;
         }
+        publishValidationFileEvent.publishFailed(validateDocumentDto, IP);
         throw new InvalidIPv4Exception("IP адрес не соответствует формату IPv4");
     }
 }

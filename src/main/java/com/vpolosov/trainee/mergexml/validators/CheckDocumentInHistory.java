@@ -1,9 +1,11 @@
 package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
+import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
 import com.vpolosov.trainee.mergexml.handler.exception.DuplicationProcessingException;
 import com.vpolosov.trainee.mergexml.model.History;
 import com.vpolosov.trainee.mergexml.service.HistoryService;
+import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.service.specification.HistorySpecifications;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCREF;
  */
 @Component
 @RequiredArgsConstructor
-public class CheckDocumentInHistory implements Predicate<Document> {
+public class CheckDocumentInHistory implements Predicate<ValidateDocumentDto> {
 
     /**
      * Сервис хранения истории объединённых платежей.
@@ -47,14 +49,19 @@ public class CheckDocumentInHistory implements Predicate<Document> {
     private final DocumentUtil documentUtil;
 
     /**
+     * Публикация события ошибки валидации.
+     */
+    private final PublishValidationFileEvent publishValidationFileEvent;
+
+    /**
      * {@inheritDoc}
      *
      * @throws DuplicationProcessingException обнаружен платёж который уже есть в истории объединенных платежей.
      */
     @Loggable
     @Override
-    public boolean test(Document document) {
-        Map<String, String> docRefAndFileNameFromHistory = getLoadDateToBDFromHistory(document);
+    public boolean test(ValidateDocumentDto validateDocumentDto) {
+        Map<String, String> docRefAndFileNameFromHistory = getLoadDateToBDFromHistory(validateDocumentDto.document());
         if (!docRefAndFileNameFromHistory.isEmpty()) {
             StringBuilder message = new StringBuilder();
             for (var entry : docRefAndFileNameFromHistory.entrySet()) {
@@ -64,8 +71,10 @@ public class CheckDocumentInHistory implements Predicate<Document> {
                     .append(entry.getKey())
                     .append(";");
             }
+            publishValidationFileEvent.publishFailed(validateDocumentDto, DOCREF);
             throw new DuplicationProcessingException(message.toString());
         }
+        publishValidationFileEvent.publishSuccess(validateDocumentDto);
         return true;
     }
 

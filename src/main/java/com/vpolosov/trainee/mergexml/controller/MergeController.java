@@ -3,6 +3,8 @@ package com.vpolosov.trainee.mergexml.controller;
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.service.HistoryService;
 import com.vpolosov.trainee.mergexml.service.MergeService;
+import com.vpolosov.trainee.mergexml.service.ValidationProcessService;
+import com.vpolosov.trainee.mergexml.service.ValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +33,16 @@ import java.nio.file.Path;
 public class MergeController {
 
     /**
+     *
+     */
+    private final ValidationProcessService validationProcessService;
+
+    /**
+     *
+     */
+    private final ValidationService validationService;
+
+    /**
      * Сервис объединения платёжных документов.
      */
     private final MergeService mergeService;
@@ -55,8 +67,11 @@ public class MergeController {
     public String patchXml(@Parameter(description = "Путь к директории с документами для объединения.",
             required = true)
                            @RequestBody String path) {
-        var total = mergeService.merge(path);
+        var startValidationProcessDto = validationProcessService.startValidationProcess(path);
+        var validatedDocumentsDto = validationService.validate(startValidationProcessDto);
+        var total = mergeService.merge(validatedDocumentsDto);
         historyService.addHistoryFromTotal(total);
+        validationProcessService.successValidationProcess(startValidationProcessDto.id(), total);
         return "Total.xml was created!";
     }
 

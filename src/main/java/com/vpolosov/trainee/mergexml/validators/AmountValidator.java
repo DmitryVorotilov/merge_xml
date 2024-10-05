@@ -2,9 +2,11 @@ package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.config.ConfigProperties;
+import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
 import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMaxAmountException;
 import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMinAmountException;
 import com.vpolosov.trainee.mergexml.handler.exception.IncorrectValueException;
+import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -23,7 +25,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.AMOUNT;
  */
 @Component
 @RequiredArgsConstructor
-public class AmountValidator implements Predicate<Document> {
+public class AmountValidator implements Predicate<ValidateDocumentDto> {
 
     /**
      * Свойства приложения.
@@ -36,6 +38,11 @@ public class AmountValidator implements Predicate<Document> {
     private final DocumentUtil documentUtil;
 
     /**
+     * Публикация события ошибки валидации.
+     */
+    private final PublishValidationFileEvent publishValidationFileEvent;
+
+    /**
      * {@inheritDoc}
      *
      * @throws IncorrectValueException     если в файле не найдена сумма платежа или она некорректна.
@@ -44,29 +51,33 @@ public class AmountValidator implements Predicate<Document> {
      */
     @Loggable
     @Override
-    public boolean test(Document document) {
-        var amountStr = documentUtil.getValueByTagName(document, AMOUNT);
+    public boolean test(ValidateDocumentDto validateDocumentDto) {
+        var amountStr = documentUtil.getValueByTagName(validateDocumentDto.document(), AMOUNT);
         BigDecimal amount;
         try {
             amount = new BigDecimal(amountStr);
         } catch (Exception e) {
+            publishValidationFileEvent.publishFailed(validateDocumentDto, AMOUNT);
             throw new IncorrectValueException(
                 "В файле %s не найдена сумма платежа или сумма некорректна"
-                    .formatted(documentUtil.getFileName(document))
+                    .formatted(documentUtil.getFileName(validateDocumentDto.document()))
             );
         }
         if (amount.compareTo(configProperties.getMinPayment()) < BigInteger.ZERO.intValue()) {
+            publishValidationFileEvent.publishFailed(validateDocumentDto, AMOUNT);
             throw new IncorrectMinAmountException(
                 "В файле %s сумма платежа не соответствует минимальной"
-                    .formatted(documentUtil.getFileName(document))
+                    .formatted(documentUtil.getFileName(validateDocumentDto.document()))
             );
         }
         if (amount.compareTo(configProperties.getMaxPayment()) > BigInteger.ZERO.intValue()) {
+            publishValidationFileEvent.publishFailed(validateDocumentDto, AMOUNT);
             throw new IncorrectMaxAmountException(
                 "В файле %s сумма платежа не соответствует максимальной"
-                    .formatted(documentUtil.getFileName(document))
+                    .formatted(documentUtil.getFileName(validateDocumentDto.document()))
             );
         }
+        publishValidationFileEvent.publishSuccess(validateDocumentDto);
         return true;
     }
 }

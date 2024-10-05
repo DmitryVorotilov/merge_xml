@@ -2,13 +2,13 @@ package com.vpolosov.trainee.mergexml.service;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.config.ConfigProperties;
+import com.vpolosov.trainee.mergexml.dtos.ValidatedDocumentsDto;
 import com.vpolosov.trainee.mergexml.handler.exception.MoreFiveHundredKbException;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import com.vpolosov.trainee.mergexml.utils.FileUtil;
 import com.vpolosov.trainee.mergexml.utils.TransformerUtil;
-import com.vpolosov.trainee.mergexml.validators.Validators;
+import com.vpolosov.trainee.mergexml.validators.CheckFileSize;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -22,7 +22,6 @@ import java.io.File;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.UUID;
 
 import static com.vpolosov.trainee.mergexml.utils.Constant.EMPTY_SIZE;
@@ -32,7 +31,6 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.BS_MESSAGE;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.DATE_TIME;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCUMENTS;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.ID;
-import static com.vpolosov.trainee.mergexml.utils.XmlTags.PAYER;
 
 /**
  * Сервис объединения платёжных документов.
@@ -43,11 +41,6 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.PAYER;
 @Service
 @RequiredArgsConstructor
 public class MergeService {
-
-    /**
-     * Логирование для пользователя.
-     */
-    private final Logger loggerForUser;
 
     /**
      * Вспомогательный класс для работы с файлами.
@@ -65,9 +58,9 @@ public class MergeService {
     private final TransformerUtil transformerUtil;
 
     /**
-     * Валидаторы XML документа.
+     * Проверка файла на размер.
      */
-    private final Validators validators;
+    private final CheckFileSize checkFileSize;
 
     /**
      * Свойства приложения.
@@ -87,27 +80,17 @@ public class MergeService {
     /**
      * Объединяет XML файлы в каталоге для создания платёжного документа.
      *
-     * @param path путь до каталога с платёжными документами.
+     * @param validatedDocumentsDto
      * @return объединённый документ платёжных операций.
      * @throws MoreFiveHundredKbException если размер объединённого файла больше 500 кб.
      */
     @Loggable
-    public Document merge(String path) {
-        List<File> xmlFiles = fileUtil.listXml(
-            path,
-            configProperties.getMinCountFiles(),
-            configProperties.getMaxCountFiles()
-        );
-        File xsdFile = fileUtil.xsd(path);
-
-        var payer = documentUtil.getValueByTagName(xmlFiles.get(FIRST_ELEMENT), PAYER);
+    public Document merge(ValidatedDocumentsDto validatedDocumentsDto) {
         Document targetDocument = documentUtil.create();
-        var validator = validators.createValidator(xsdFile);
-        xmlFiles.stream()
-            .map(documentUtil::parse)
-            .filter(document -> validators.validate(document, validator, payer))
-            .peek(document -> loggerForUser.info("Файл {} прошел проверку.", documentUtil.getFileName(document)))
-            .forEach(xmlFile -> aggregateTotal(xmlFile, targetDocument));
+
+        for (var document : validatedDocumentsDto.documents()) {
+            aggregateTotal(document, targetDocument);
+        }
 
         targetDocument.normalizeDocument();
         targetDocument.getElementsByTagName(BS_MESSAGE)
@@ -126,10 +109,10 @@ public class MergeService {
         DOMSource dom = new DOMSource(targetDocument);
 
         var fileName = fileUtil.fileNameWithTime(configProperties.getFileName(), clock, totalTimeFormat);
-        var total = new File(path, fileName);
+        var total = new File(validatedDocumentsDto.path(), fileName);
         transformerUtil.transform(dom, new StreamResult(total));
 
-        if (validators.checkFileSize().isMoreThanFiveKb(total)) {
+        if (checkFileSize.isMoreThanFiveKb(total)) {
             fileUtil.delete(total);
             throw new MoreFiveHundredKbException("There are more than 500 kb files");
         }

@@ -1,12 +1,10 @@
 package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
+import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
 import com.vpolosov.trainee.mergexml.handler.exception.InvalidSchemaException;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
@@ -30,40 +28,33 @@ import java.util.function.Predicate;
 public class Validators {
 
     /**
-     * Проверка файла на размер.
-     */
-    @Getter
-    @Accessors(fluent = true)
-    private final CheckFileSize checkFileSize;
-
-    /**
      * Список валидаторов с одним параметром для проверки XML файла.
      */
-    private final List<Predicate<Document>> singleParamValidators;
+    private final List<Predicate<ValidateDocumentDto>> singleParamValidators;
 
     /**
      * Валидатор для проверки одного плательщика.
      */
-    private final BiPredicate<String, Document> paymentValidator;
+    private final BiPredicate<String, ValidateDocumentDto> paymentValidator;
 
     /**
      * Валидатор для проверки XML файла по XSD схеме.
      */
-    private final BiPredicate<Document, Validator> xmlValidator;
+    private final BiPredicate<ValidateDocumentDto, Validator> xmlValidator;
 
     /**
      * Прогоняет XML документ по всем валидаторам.
      *
-     * @param document  документ для объединения платежа.
+     * @param validateDocumentDto  документ для объединения платежа.
      * @param validator проверяет схему документа платежа.
      * @param payer     плательщик.
      * @return true если все проверки прошли успешно иначе выбрасывает соответствующее исключение.
      */
     @Loggable
-    public boolean validate(Document document, Validator validator, String payer) {
-        return xmlValidator.test(document, validator)
-            && singleParamValidators.stream().allMatch(predicate -> predicate.test(document))
-            && paymentValidator.test(payer, document);
+    public boolean validateDocument(ValidateDocumentDto validateDocumentDto, Validator validator, String payer) {
+        return xmlValidator.test(validateDocumentDto, validator)
+            && singleParamValidators.stream().allMatch(predicate -> predicate.test(validateDocumentDto))
+            && paymentValidator.test(payer, validateDocumentDto);
     }
 
     /**

@@ -6,7 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -19,6 +22,9 @@ import java.util.UUID;
  *
  * @author Samat Hamzin
  */
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Getter
 @Setter
 @Entity
@@ -41,13 +47,13 @@ public class ValidationProcess {
     /**
      * Успех/провал валидации.
      */
-    @Column(name="is_succsess", nullable = false)
+    @Column(name="is_success", nullable = false)
     private Boolean isSuccess;
 
     /**
      * Путь к итоговому документу.
      */
-    @Column(name="total_doc_ref", nullable = false)
+    @Column(name="total_doc_ref")
     private String totalDocRef;
 
     /**

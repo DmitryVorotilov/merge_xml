@@ -1,7 +1,7 @@
 package com.vpolosov.trainee.mergexml.handler.exception;
 
 /**
- * Исключение выбрасываемое при отсутствии информации по.
+ * Исключение выбрасываемое при отсутствии информации по основанию платежа.
  *
  * @author Maksim Litvinenko
  */
