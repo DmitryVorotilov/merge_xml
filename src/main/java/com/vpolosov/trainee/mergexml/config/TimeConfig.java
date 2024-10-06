@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -42,6 +44,9 @@ public class TimeConfig {
      */
     @Bean
     public Clock clock() {
-        return Clock.systemUTC();
+        var fixedSameDate = LocalDate.parse("22.02.2024", localDateFormat())
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC);
+        return Clock.fixed(fixedSameDate, ZoneOffset.UTC);
     }
 }

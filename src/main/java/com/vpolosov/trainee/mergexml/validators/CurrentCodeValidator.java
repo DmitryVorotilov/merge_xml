@@ -3,14 +3,12 @@ package com.vpolosov.trainee.mergexml.validators;
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.config.ConfigProperties;
 import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
-import com.vpolosov.trainee.mergexml.handler.exception.InvalidCurrencyCodeValueException;
-import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
+import com.vpolosov.trainee.mergexml.validators.api.Validation;
+import com.vpolosov.trainee.mergexml.validators.api.ValidationContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-
-import java.util.function.Predicate;
 
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.CURRCODE;
 
@@ -21,7 +19,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.CURRCODE;
  */
 @Component
 @RequiredArgsConstructor
-public class CurrentCodeValidator implements Predicate<ValidateDocumentDto> {
+public class CurrentCodeValidator implements Validation<ValidateDocumentDto> {
 
     /**
      * Свойства приложения.
@@ -33,26 +31,15 @@ public class CurrentCodeValidator implements Predicate<ValidateDocumentDto> {
      */
     private final DocumentUtil documentUtil;
 
-    /**
-     * Публикация события ошибки валидации.
-     */
-    private final PublishValidationFileEvent publishValidationFileEvent;
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidCurrencyCodeValueException когда значение кода валюты не соответствует.
-     */
     @Loggable
     @Override
-    public boolean test(ValidateDocumentDto validateDocumentDto) {
+    public boolean validate(ValidateDocumentDto validateDocumentDto, ValidationContext context) {
         var currCode = documentUtil.getValueByTagName(validateDocumentDto.document(), CURRCODE);
         var validCurrCode = String.valueOf(configProperties.getCurrencyCode());
         if (!currCode.equals(validCurrCode)) {
-            publishValidationFileEvent.publishFailed(validateDocumentDto, CURRCODE);
-            throw new InvalidCurrencyCodeValueException("Допустимое значение кода валюты " + validCurrCode);
+            context.addMessage("Допустимое значение кода валюты " + validCurrCode, CURRCODE);
+            return false;
         }
-        publishValidationFileEvent.publishSuccess(validateDocumentDto);
         return true;
     }
 }

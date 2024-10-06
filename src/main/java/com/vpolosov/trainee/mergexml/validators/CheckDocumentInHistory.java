@@ -2,12 +2,12 @@ package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
-import com.vpolosov.trainee.mergexml.handler.exception.DuplicationProcessingException;
 import com.vpolosov.trainee.mergexml.model.History;
 import com.vpolosov.trainee.mergexml.service.HistoryService;
-import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.service.specification.HistorySpecifications;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
+import com.vpolosov.trainee.mergexml.validators.api.Validation;
+import com.vpolosov.trainee.mergexml.validators.api.ValidationContext;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.springframework.data.jpa.domain.Specification;
@@ -17,7 +17,6 @@ import org.w3c.dom.Document;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCREF;
@@ -31,7 +30,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCREF;
  */
 @Component
 @RequiredArgsConstructor
-public class CheckDocumentInHistory implements Predicate<ValidateDocumentDto> {
+public class CheckDocumentInHistory implements Validation<ValidateDocumentDto> {
 
     /**
      * Сервис хранения истории объединённых платежей.
@@ -48,19 +47,9 @@ public class CheckDocumentInHistory implements Predicate<ValidateDocumentDto> {
      */
     private final DocumentUtil documentUtil;
 
-    /**
-     * Публикация события ошибки валидации.
-     */
-    private final PublishValidationFileEvent publishValidationFileEvent;
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws DuplicationProcessingException обнаружен платёж который уже есть в истории объединенных платежей.
-     */
     @Loggable
     @Override
-    public boolean test(ValidateDocumentDto validateDocumentDto) {
+    public boolean validate(ValidateDocumentDto validateDocumentDto, ValidationContext context) {
         Map<String, String> docRefAndFileNameFromHistory = getLoadDateToBDFromHistory(validateDocumentDto.document());
         if (!docRefAndFileNameFromHistory.isEmpty()) {
             StringBuilder message = new StringBuilder();
@@ -71,10 +60,9 @@ public class CheckDocumentInHistory implements Predicate<ValidateDocumentDto> {
                     .append(entry.getKey())
                     .append(";");
             }
-            publishValidationFileEvent.publishFailed(validateDocumentDto, DOCREF);
-            throw new DuplicationProcessingException(message.toString());
+            context.addMessage(message.toString(), DOCREF);
+            return false;
         }
-        publishValidationFileEvent.publishSuccess(validateDocumentDto);
         return true;
     }
 

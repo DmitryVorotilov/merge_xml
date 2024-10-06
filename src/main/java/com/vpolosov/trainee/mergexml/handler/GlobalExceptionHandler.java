@@ -1,16 +1,10 @@
 package com.vpolosov.trainee.mergexml.handler;
 
 import com.vpolosov.trainee.mergexml.handler.dto.ErrorResponseDTO;
-import com.vpolosov.trainee.mergexml.handler.exception.DifferentPayerException;
-import com.vpolosov.trainee.mergexml.handler.exception.DuplicationProcessingException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectDateException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMinAmountException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectValueException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectXmlFileException;
-import com.vpolosov.trainee.mergexml.handler.exception.InvalidCurrencyCodeValueException;
 import com.vpolosov.trainee.mergexml.handler.exception.MoreFiveHundredKbException;
 import com.vpolosov.trainee.mergexml.handler.exception.NotExactlyOneXsdFileException;
 import com.vpolosov.trainee.mergexml.handler.exception.NotExactlyTenFilesException;
+import com.vpolosov.trainee.mergexml.handler.exception.ValidationException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,24 +31,19 @@ public class GlobalExceptionHandler {
      * @return сообщение об ошибке с типом {@code Bad Request}.
      */
     @ExceptionHandler({
-        IncorrectXmlFileException.class,
-        MoreFiveHundredKbException.class,
         NotExactlyOneXsdFileException.class,
         NotExactlyTenFilesException.class,
-        DuplicationProcessingException.class,
-        IncorrectMinAmountException.class,
-        IncorrectValueException.class,
-        IncorrectDateException.class,
-        DifferentPayerException.class,
-        InvalidCurrencyCodeValueException.class
+        ValidationException.class,
+        MoreFiveHundredKbException.class,
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ApiResponse(responseCode = "400", description = "Ошибки валидации документов.",
             content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
-    public ErrorResponseDTO handleIllegalArgumentException(Exception e) {
+    public ErrorResponseDTO handleFileException(ValidationException e) {
         log.error(e.getMessage(), e);
-        return new ErrorResponseDTO("Bad Request", e.getMessage());
+        return new ErrorResponseDTO("Bad Request", e.messages());
     }
+
 
     /**
      * Перехватчик исключений для преобразования в статус код 500.

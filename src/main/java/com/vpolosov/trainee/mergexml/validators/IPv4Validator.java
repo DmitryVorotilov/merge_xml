@@ -2,14 +2,13 @@ package com.vpolosov.trainee.mergexml.validators;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
-import com.vpolosov.trainee.mergexml.handler.exception.InvalidIPv4Exception;
-import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
+import com.vpolosov.trainee.mergexml.validators.api.Validation;
+import com.vpolosov.trainee.mergexml.validators.api.ValidationContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.IP;
@@ -21,7 +20,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.IP;
  */
 @Component
 @RequiredArgsConstructor
-public class IPv4Validator implements Predicate<ValidateDocumentDto> {
+public class IPv4Validator implements Validation<ValidateDocumentDto> {
 
     /**
      * Regexp паттерн для проверки IPv4.
@@ -35,25 +34,14 @@ public class IPv4Validator implements Predicate<ValidateDocumentDto> {
      */
     private final DocumentUtil documentUtil;
 
-    /**
-     * Публикация события ошибки валидации.
-     */
-    private final PublishValidationFileEvent publishValidationFileEvent;
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidIPv4Exception когда IP адрес не соответствует формату IPv4.
-     */
-    @Override
     @Loggable
-    public boolean test(ValidateDocumentDto validateDocumentDto) {
+    @Override
+    public boolean validate(ValidateDocumentDto validateDocumentDto, ValidationContext context) {
         var ipv4 = documentUtil.getValueByTagName(validateDocumentDto.document(), IP);
         if (IPV4_REGEXP.matcher(ipv4).matches()) {
-            publishValidationFileEvent.publishSuccess(validateDocumentDto);
             return true;
         }
-        publishValidationFileEvent.publishFailed(validateDocumentDto, IP);
-        throw new InvalidIPv4Exception("IP адрес не соответствует формату IPv4");
+        context.addMessage("IP адрес не соответствует формату IPv4", IP);
+        return false;
     }
 }

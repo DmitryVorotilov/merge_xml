@@ -3,20 +3,15 @@ package com.vpolosov.trainee.mergexml.validators;
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.config.GraphConfig;
 import com.vpolosov.trainee.mergexml.dtos.ValidateDocumentDto;
-import com.vpolosov.trainee.mergexml.handler.exception.DependencyCoderevNotFoundException;
-import com.vpolosov.trainee.mergexml.handler.exception.DependencyPayGrndParamNotFoundException;
-import com.vpolosov.trainee.mergexml.handler.exception.NoSingleDependencyPayInfoException;
-import com.vpolosov.trainee.mergexml.handler.exception.DependencyPayTypeParamNotFoundException;
-import com.vpolosov.trainee.mergexml.service.PublishValidationFileEvent;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import com.vpolosov.trainee.mergexml.utils.Vertex;
+import com.vpolosov.trainee.mergexml.validators.api.Validation;
+import com.vpolosov.trainee.mergexml.validators.api.ValidationContext;
 import lombok.RequiredArgsConstructor;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-
-import java.util.function.Predicate;
 
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.CODEREV;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.PAYGRNDPARAM;
@@ -30,7 +25,7 @@ import static com.vpolosov.trainee.mergexml.utils.XmlTags.PAYTYPEPARAM;
  */
 @Component
 @RequiredArgsConstructor
-public class PayInfoValidator implements Predicate<ValidateDocumentDto> {
+public class PayInfoValidator implements Validation<ValidateDocumentDto> {
 
     /**
      * Вспомогательный класс для работы с {@link Document}.
@@ -42,14 +37,9 @@ public class PayInfoValidator implements Predicate<ValidateDocumentDto> {
      */
     private final Graph<Vertex, DefaultEdge> graph;
 
-    /**
-     * Публикация события ошибки валидации.
-     */
-    private final PublishValidationFileEvent publishValidationFileEvent;
-
-    @Override
     @Loggable
-    public boolean test(ValidateDocumentDto validateDocumentDto) {
+    @Override
+    public boolean validate(ValidateDocumentDto validateDocumentDto, ValidationContext context) {
         var coderev = documentUtil.getValueByTagName(validateDocumentDto.document(), CODEREV);
         var payTypeParam = documentUtil.getValueByTagName(validateDocumentDto.document(), PAYTYPEPARAM);
         var payGrndParam = documentUtil.getValueByTagName(validateDocumentDto.document(), PAYGRNDPARAM);
@@ -57,30 +47,21 @@ public class PayInfoValidator implements Predicate<ValidateDocumentDto> {
         var vPayTypeParam = new Vertex(payTypeParam, PAYTYPEPARAM);
         var vPayGrndParam = new Vertex(payGrndParam, PAYGRNDPARAM);
         if (!graph.containsVertex(vCodeRev)) {
-            publishValidationFileEvent.publishFailed(validateDocumentDto, CODEREV);
-            throw new DependencyCoderevNotFoundException(
-                "Код программы доходов бюджетов не найден в графе зависимостей"
-            );
+            context.addMessage("Код программы доходов бюджетов не найден в графе зависимостей", CODEREV);
+            return false;
         }
         if (!graph.containsVertex(vPayTypeParam)) {
-            publishValidationFileEvent.publishFailed(validateDocumentDto, PAYTYPEPARAM);
-            throw new DependencyPayTypeParamNotFoundException(
-                "Тип платежа не найден в графе зависимостей"
-            );
+            context.addMessage("Тип платежа не найден в графе зависимостей", PAYTYPEPARAM);
+            return false;
         }
         if (!graph.containsVertex(vPayGrndParam)) {
-            publishValidationFileEvent.publishFailed(validateDocumentDto, PAYGRNDPARAM);
-            throw new DependencyPayGrndParamNotFoundException(
-                "Основание платежа не найдено в графе зависимостей"
-            );
+            context.addMessage("Основание платежа не найдено в графе зависимостей", PAYGRNDPARAM);
+            return false;
         }
         if (!(graph.containsEdge(vCodeRev, vPayTypeParam) && graph.containsEdge(vPayTypeParam, vPayGrndParam))) {
-            publishValidationFileEvent.publishFailed(validateDocumentDto, CODEREV, PAYTYPEPARAM, PAYGRNDPARAM);
-            throw new NoSingleDependencyPayInfoException(
-                "Код программы доходов бюджетов, тип платежа и основание платежа не имеют единой связи"
-            );
+            context.addMessage("Код программы доходов бюджетов, тип платежа и основание платежа не имеют единой связи", CODEREV, PAYTYPEPARAM, PAYGRNDPARAM);
+            return false;
         }
-        publishValidationFileEvent.publishSuccess(validateDocumentDto);
         return true;
     }
 }

@@ -8,7 +8,9 @@ import com.vpolosov.trainee.mergexml.repository.ValidationFileHistoryRepository;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -25,7 +27,8 @@ public class ValidationEventListener {
 
     private final ValidationFileHistoryRepository validationFileHistoryRepository;
 
-    @Transactional
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @EventListener
     public void handle(ValidationFileSuccessEvent event) {
         var validationProcess = ValidationProcess.builder()
@@ -43,7 +46,8 @@ public class ValidationEventListener {
         validationFileHistoryRepository.save(fileHistory);
     }
 
-    @Transactional
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @EventListener
     public void handle(ValidationFileFailedEvent event) {
         var validationProcess = ValidationProcess.builder()

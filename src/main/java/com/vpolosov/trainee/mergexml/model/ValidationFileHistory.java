@@ -144,7 +144,7 @@ public class ValidationFileHistory {
                 + "isSuccess = "
                 + isSuccess
                 + ", "
-                + "failFields = "
+                + "fields = "
                 + failFields
                 + ", "
                 + "validationDate = "
