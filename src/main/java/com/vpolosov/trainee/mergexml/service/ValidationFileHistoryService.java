@@ -1,12 +1,20 @@
 package com.vpolosov.trainee.mergexml.service;
 
+import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.dtos.ValidationFileHistoryDto;
+import com.vpolosov.trainee.mergexml.handler.filter.ValidationFileHistoryFilter;
 import com.vpolosov.trainee.mergexml.mappers.ValidationFileHistoryMapper;
+import com.vpolosov.trainee.mergexml.model.ValidationFileHistory;
+import com.vpolosov.trainee.mergexml.model.ValidationFileHistory_;
 import com.vpolosov.trainee.mergexml.repository.ValidationFileHistoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 
 /**
@@ -28,11 +36,31 @@ public class ValidationFileHistoryService {
     private final ValidationFileHistoryMapper mapper;
 
     /**
-     * Получение и преобразование всех провалидируемых файлов из сущностей в дто.
+     * Получение и преобразование всех провалидированных файлов из сущностей в дто.
      *
-     * @return Список отсортированных по убыванию провалидируемых файлов по дате валидации.
+     * @return Список отсортированных по убыванию, либо в зависимости от параметра провалидированных файлов по дате валидации.
      */
-    public List<ValidationFileHistoryDto> getAllValidatedFiles() {
-        return mapper.toDtoList(repository.findAllByOrderByValidationDateDesc());
+    @Loggable
+    @Transactional(readOnly = true)
+    public Page<ValidationFileHistoryDto> getAllValidatedFiles(Pageable pageable, Sort.Direction sortDirection) {
+        Sort sort = (sortDirection == Sort.Direction.ASC)
+                ? Sort.by(ValidationFileHistory_.VALIDATION_DATE).ascending()
+                : Sort.by(ValidationFileHistory_.VALIDATION_DATE).descending();
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<ValidationFileHistory> historyPage = repository.findAll(sortedPageable);
+        return historyPage.map(mapper::toDto);
+    }
+
+    /**
+     * Получение страницы провалидированных файлов на основе фильтрации.
+     *
+     * @return Страница объектов {@code ValidationFileHistoryDto}, соответствующих фильтру и пагинации.
+     */
+    @Loggable
+    @Transactional(readOnly = true)
+    public Page<ValidationFileHistoryDto> getFilteredHistory(ValidationFileHistoryFilter filter, Pageable pageable) {
+        Specification<ValidationFileHistory> spec = filter.getSpecification();
+        Page<ValidationFileHistory> histories = repository.findAll(spec, pageable);
+        return histories.map(mapper::toDto);
     }
 }
