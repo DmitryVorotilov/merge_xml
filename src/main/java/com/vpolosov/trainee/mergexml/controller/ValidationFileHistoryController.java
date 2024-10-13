@@ -5,6 +5,7 @@ import com.vpolosov.trainee.mergexml.dtos.ValidationFileHistoryDto;
 import com.vpolosov.trainee.mergexml.dtos.views.ValidationFileHistoryDtoViews;
 import com.vpolosov.trainee.mergexml.handler.filter.ValidationFileHistoryFilter;
 import com.vpolosov.trainee.mergexml.service.ValidationFileHistoryService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -14,9 +15,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 /**
  * REST API контроллер для получения информации по истории валидации файлов.
@@ -62,5 +66,17 @@ public class ValidationFileHistoryController {
             @ParameterObject @ModelAttribute @Valid ValidationFileHistoryFilter filter,
             @ParameterObject Pageable pageable) {
         return service.getFilteredHistory(filter, pageable);
+    }
+
+    /**
+     * Извлекает историю файла проверки по его уникальному идентификатору.
+     *
+     * @param id уникальный идентификатор истории файла проверки, которую нужно получить, представленный как UUID.
+     * @return {@link ValidationFileHistoryDto}, соответствующий данному идентификатору.
+     * @throws EntityNotFoundException если история файлов проверки с данным идентификатором не найдена.
+     */
+    @GetMapping({"/{id}"})
+    public ValidationFileHistoryDto getById(@PathVariable UUID id) {
+        return service.getValidationFileHistoryById(id);
     }
 }
