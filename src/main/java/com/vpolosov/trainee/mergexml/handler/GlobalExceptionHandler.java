@@ -1,16 +1,19 @@
 package com.vpolosov.trainee.mergexml.handler;
 
 import com.vpolosov.trainee.mergexml.handler.dto.ErrorResponseDTO;
-import com.vpolosov.trainee.mergexml.handler.exception.DifferentPayerException;
-import com.vpolosov.trainee.mergexml.handler.exception.DuplicationProcessingException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectDateException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMinAmountException;
-import com.vpolosov.trainee.mergexml.handler.exception.IncorrectValueException;
 import com.vpolosov.trainee.mergexml.handler.exception.IncorrectXmlFileException;
-import com.vpolosov.trainee.mergexml.handler.exception.InvalidCurrencyCodeValueException;
 import com.vpolosov.trainee.mergexml.handler.exception.MoreFiveHundredKbException;
 import com.vpolosov.trainee.mergexml.handler.exception.NotExactlyOneXsdFileException;
 import com.vpolosov.trainee.mergexml.handler.exception.NotExactlyTenFilesException;
+import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMinAmountException;
+import com.vpolosov.trainee.mergexml.handler.exception.IncorrectMaxAmountException;
+import com.vpolosov.trainee.mergexml.handler.exception.DuplicationProcessingException;
+import com.vpolosov.trainee.mergexml.handler.exception.IncorrectDateException;
+import com.vpolosov.trainee.mergexml.handler.exception.IncorrectValueException;
+import com.vpolosov.trainee.mergexml.handler.exception.DifferentPayerException;
+import com.vpolosov.trainee.mergexml.handler.exception.NoSingleDependencyPayInfoException;
+import com.vpolosov.trainee.mergexml.handler.exception.DependencyCoderevNotFoundException;
+import com.vpolosov.trainee.mergexml.handler.exception.InvalidCurrencyCodeValueException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,16 +40,19 @@ public class GlobalExceptionHandler {
      * @return сообщение об ошибке с типом {@code Bad Request}.
      */
     @ExceptionHandler({
-        IncorrectXmlFileException.class,
-        MoreFiveHundredKbException.class,
-        NotExactlyOneXsdFileException.class,
-        NotExactlyTenFilesException.class,
-        DuplicationProcessingException.class,
-        IncorrectMinAmountException.class,
-        IncorrectValueException.class,
         IncorrectDateException.class,
         DifferentPayerException.class,
-        InvalidCurrencyCodeValueException.class
+        IncorrectValueException.class,
+        IncorrectXmlFileException.class,
+        MoreFiveHundredKbException.class,
+        IncorrectMaxAmountException.class,
+        IncorrectMinAmountException.class,
+        NotExactlyTenFilesException.class,
+        NotExactlyOneXsdFileException.class,
+        DuplicationProcessingException.class,
+        InvalidCurrencyCodeValueException.class,
+        NoSingleDependencyPayInfoException.class,
+        DependencyCoderevNotFoundException.class
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ApiResponse(responseCode = "400", description = "Ошибки валидации документов.",
