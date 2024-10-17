@@ -2,16 +2,13 @@ package com.vpolosov.trainee.mergexml.service;
 
 import com.vpolosov.trainee.mergexml.aspect.Loggable;
 import com.vpolosov.trainee.mergexml.config.ConfigProperties;
-import com.vpolosov.trainee.mergexml.event.TotalDocumentGeneratedEvent;
 import com.vpolosov.trainee.mergexml.handler.exception.MoreFiveHundredKbException;
-import com.vpolosov.trainee.mergexml.model.ValidationProcess;
 import com.vpolosov.trainee.mergexml.utils.DocumentUtil;
 import com.vpolosov.trainee.mergexml.utils.FileUtil;
 import com.vpolosov.trainee.mergexml.utils.TransformerUtil;
 import com.vpolosov.trainee.mergexml.validators.Validators;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -25,23 +22,23 @@ import java.io.File;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 import static com.vpolosov.trainee.mergexml.utils.Constant.EMPTY_SIZE;
 import static com.vpolosov.trainee.mergexml.utils.Constant.FIRST_ELEMENT;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.BS_HEAD;
-import static com.vpolosov.trainee.mergexml.utils.XmlTags.ID;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.BS_MESSAGE;
-import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCUMENTS;
 import static com.vpolosov.trainee.mergexml.utils.XmlTags.DATE_TIME;
-
+import static com.vpolosov.trainee.mergexml.utils.XmlTags.DOCUMENTS;
+import static com.vpolosov.trainee.mergexml.utils.XmlTags.ID;
+import static com.vpolosov.trainee.mergexml.utils.XmlTags.PAYER;
 
 /**
  * Сервис объединения платёжных документов.
  *
  * @author Ali Takushinov
  * @author Maksim Litvinenko
- * @author Artyom Bogaichuk
  */
 @Service
 @RequiredArgsConstructor
@@ -88,79 +85,55 @@ public class MergeService {
     private final DateTimeFormatter totalTimeFormat;
 
     /**
-     * Сервис для валидации XML файлов платежных документов.
-     */
-    private final ValidationService validationService;
-
-    /**
-     * Публикатор событий приложения.
-     */
-    private final ApplicationEventPublisher eventPublisher;
-
-    /**
      * Объединяет XML файлы в каталоге для создания платёжного документа.
      *
      * @param path путь до каталога с платёжными документами.
      * @return объединённый документ платёжных операций.
+     * @throws MoreFiveHundredKbException если размер объединённого файла больше 500 кб.
      */
     @Loggable
     public Document merge(String path) {
+        List<File> xmlFiles = fileUtil.listXml(
+            path,
+            configProperties.getMinCountFiles(),
+            configProperties.getMaxCountFiles()
+        );
+        File xsdFile = fileUtil.xsd(path);
+
+        var payer = documentUtil.getValueByTagName(xmlFiles.get(FIRST_ELEMENT), PAYER);
         Document targetDocument = documentUtil.create();
+        var validator = validators.createValidator(xsdFile);
+        xmlFiles.stream()
+            .map(documentUtil::parse)
+            .filter(document -> validators.validate(document, validator, payer))
+            .peek(document -> loggerForUser.info("Файл {} прошел проверку.", documentUtil.getFileName(document)))
+            .forEach(xmlFile -> aggregateTotal(xmlFile, targetDocument));
 
-        ValidationProcess validationProcess = new ValidationProcess();
-        var xmlFiles = validationService.validateFiles(path, validationProcess);
+        targetDocument.normalizeDocument();
+        targetDocument.getElementsByTagName(BS_MESSAGE)
+            .item(FIRST_ELEMENT)
+            .getAttributes()
+            .getNamedItem(ID)
+            .setNodeValue(UUID.randomUUID().toString());
+        targetDocument.getElementsByTagName(BS_MESSAGE)
+            .item(FIRST_ELEMENT)
+            .getAttributes()
+            .getNamedItem(DATE_TIME)
+            .setNodeValue(LocalDateTime.now().toString());
 
-        for (File xmlFile : xmlFiles) {
-            Document document = documentUtil.parse(xmlFile);
-            aggregateTotal(document, targetDocument);
+
+        targetDocument.normalize();
+        DOMSource dom = new DOMSource(targetDocument);
+
+        var fileName = fileUtil.fileNameWithTime(configProperties.getFileName(), clock, totalTimeFormat);
+        var total = new File(path, fileName);
+        transformerUtil.transform(dom, new StreamResult(total));
+
+        if (validators.checkFileSize().isMoreThanFiveKb(total)) {
+            fileUtil.delete(total);
+            throw new MoreFiveHundredKbException("There are more than 500 kb files");
         }
-
-        generateTotalDocument(targetDocument, path, validationProcess);
         return targetDocument;
-    }
-
-    /**
-     * Генерирует итоговый документ с платежными операциями.
-     *
-     * @param targetDocument    результирующий документ, содержащий объединённые данные.
-     * @param path              путь до каталога для сохранения итогового файла.
-     * @param validationProcess объект процесса валидации.
-     * @throws MoreFiveHundredKbException если размер итогового файла превышает 500 КБ.
-     */
-    @Loggable
-    private void generateTotalDocument(Document targetDocument, String path, ValidationProcess validationProcess) {
-        try {
-            targetDocument.normalizeDocument();
-            targetDocument.getElementsByTagName(BS_MESSAGE)
-                    .item(FIRST_ELEMENT)
-                    .getAttributes()
-                    .getNamedItem(ID)
-                    .setNodeValue(UUID.randomUUID().toString());
-            targetDocument.getElementsByTagName(BS_MESSAGE)
-                    .item(FIRST_ELEMENT)
-                    .getAttributes()
-                    .getNamedItem(DATE_TIME)
-                    .setNodeValue(LocalDateTime.now().toString());
-
-            targetDocument.normalize();
-            DOMSource dom = new DOMSource(targetDocument);
-
-            var fileName = fileUtil.fileNameWithTime(configProperties.getFileName(), clock, totalTimeFormat);
-            var total = new File(path, fileName);
-            transformerUtil.transform(dom, new StreamResult(total));
-
-            if (validators.checkFileSize().isMoreThanFiveKb(total)) {
-                fileUtil.delete(total);
-                throw new MoreFiveHundredKbException("There are more than 500 kb files");
-            }
-
-            eventPublisher.publishEvent(
-                    new TotalDocumentGeneratedEvent(this, validationProcess, total.getAbsolutePath())
-            );
-        } catch (Exception e) {
-            loggerForUser.error("Failed to generate total document: {}", e.getMessage());
-            throw e;
-        }
     }
 
     /**
@@ -178,29 +151,29 @@ public class MergeService {
             targetDocument.appendChild(targetNode);
         } else {
             NodeList headerNodeList = document.getElementsByTagName(BS_HEAD)
-                    .item(FIRST_ELEMENT)
-                    .getChildNodes();
+                .item(FIRST_ELEMENT)
+                .getChildNodes();
             for (int i = FIRST_ELEMENT; i < headerNodeList.getLength(); i++) {
                 Node headerNode = headerNodeList.item(i);
                 Node targetHeaderNode = targetDocument.importNode(headerNode, true);
 
                 Element targetHeaderElement = (Element) targetDocument
-                        .getElementsByTagName(BS_HEAD)
-                        .item(FIRST_ELEMENT);
+                    .getElementsByTagName(BS_HEAD)
+                    .item(FIRST_ELEMENT);
                 targetHeaderElement.appendChild(targetHeaderNode);
             }
 
             NodeList documentNodeList = document.getElementsByTagName(DOCUMENTS)
-                    .item(FIRST_ELEMENT)
-                    .getChildNodes();
+                .item(FIRST_ELEMENT)
+                .getChildNodes();
 
             for (int i = FIRST_ELEMENT; i < documentNodeList.getLength(); i++) {
                 Node documentNode = documentNodeList.item(i);
                 Node targetDocumentNode = targetDocument.importNode(documentNode, true);
                 targetDocument.normalize();
                 Element targetDocumentElement = (Element) targetDocument
-                        .getElementsByTagName(DOCUMENTS)
-                        .item(FIRST_ELEMENT);
+                    .getElementsByTagName(DOCUMENTS)
+                    .item(FIRST_ELEMENT);
                 targetDocumentElement.appendChild(targetDocumentNode);
             }
         }

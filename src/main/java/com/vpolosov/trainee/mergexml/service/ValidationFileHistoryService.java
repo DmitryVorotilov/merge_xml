@@ -19,10 +19,9 @@ import java.util.List;
 public class ValidationFileHistoryService {
 
     /**
-     * Репозиторий для работы с БД истории валидаций XML файлов.
+     * Репозиторий для работы с БД.
      */
-    private final ValidationFileHistoryRepository validationFileHistoryRepository;
-
+    private final ValidationFileHistoryRepository repository;
     /**
      * Маппер для преобразования из сущностей в ДТО и обратно.
      */
@@ -34,6 +33,6 @@ public class ValidationFileHistoryService {
      * @return Список отсортированных по убыванию провалидируемых файлов по дате валидации.
      */
     public List<ValidationFileHistoryDto> getAllValidatedFiles() {
-        return mapper.toDtoList(validationFileHistoryRepository.findAllByOrderByValidationDateDesc());
+        return mapper.toDtoList(repository.findAllByOrderByValidationDateDesc());
     }
 }
